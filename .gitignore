@@ -1,0 +1,11 @@
+# .gitignore
+
+# Certificates and private keys
+*.pem
+*.crt
+*.key
+*.der
+
+# Cache and system files
+__pycache__/
+.vscode/
