@@ -1,13 +1,18 @@
 import time
-import machine
+import json
 import network
 import ssl
 import ntptime
 import secrets
+import BME280 #Library to manipulate the sensor if you are using another one you may need another library
+from machine import Pin, I2C, reset
 from umqtt.simple import MQTTClient
 
 KEY_PATH = "certs/private.pem.key"
 CERT_PATH = "certs/cert.pem.crt"
+
+# ESP32 - Pin assignment
+i2c = I2C(scl=Pin(22), sda=Pin(21), freq=10000)
 
 def connect_wifi():
     wlan = network.WLAN(network.STA_IF)
@@ -32,6 +37,8 @@ def read_file(filename):
         return f.read()
 
 def run():
+    bme = BME280.BME280(i2c=i2c)
+
     connect_wifi()
     set_time()
 
@@ -63,7 +70,15 @@ def run():
         print("Connected to AWS IoT!")
         
         while True:
-            msg = '{"temperatura": 23.5, "estado": "funcionando"}'
+            temp = bme.temperature
+            hum = bme.humidity
+            pres = bme.pressure
+            data = {
+                "temperature": temp,
+                "humidity": hum,
+                "pressure": pres
+            }
+            msg = json.dumps(data)
             client.publish(secrets.TOPIC, msg)
             print("Enviado:", msg)
             time.sleep(10)
@@ -71,7 +86,7 @@ def run():
     except Exception as e:
         print("Error:", e)
         time.sleep(10)
-        machine.reset()
+        reset()
 
 # Execute
 run()
