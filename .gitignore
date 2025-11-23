@@ -7,5 +7,6 @@
 *.der
 
 # Cache and system files
+.venv/
 __pycache__/
 .vscode/
