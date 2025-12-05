@@ -1,3 +1,8 @@
-theme: jekyll-theme-slate
 title: AWS IoT Weather Station
 description: Weather monitoring with ESP32 and Cloud Computing
+theme: just-the-docs
+
+url: https://dan1543.github.io/Weather-Monitor/
+
+#aux_links: # remove if you don't want this link to appear on your pages
+#  Template Repository: https://github.com/YOUR-USERNAME/YOUR-SITE-NAME
