@@ -10,3 +10,7 @@
 .venv/
 __pycache__/
 .vscode/
+
+# JSON esp32 files (passwords and saved states)
+esp32/wifi.json
+esp32/last_reading.json

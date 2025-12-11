@@ -56,9 +56,7 @@ df_final = pd.concat(dfs)
 def translate_weather(code):
     if code in [1, 2]: return "Clear"
     elif code in [3, 4]: return "Cloudy"
-    elif code in [5, 6]: return "Fog"
     elif code in [7, 8, 9, 10, 11, 17, 18]: return "Rain"
-    elif code in [12, 13, 14, 15, 16, 19, 20, 21, 22, 24]: return "Snow"
     elif code in [23, 25, 26, 27]: return "Storm"
     else: return "Other"
 
