@@ -1,26 +1,21 @@
-# ☁️ ESP32 AWS IoT Weather Station
+# ESP32 AWS IoT Weather Station
 
-![Status](https://img.shields.io/badge/Status-Prototype-orange)
 ![Platform](https://img.shields.io/badge/Platform-ESP32-blue)
 ![Language](https://img.shields.io/badge/Language-MicroPython-green)
 ![Cloud](https://img.shields.io/badge/Cloud-AWS_IoT_Core-232F3E)
 
-A robust, secure IoT proof-of-concept that streams environmental telemetry (Temperature, Humidity, Pressure) from an ESP32 microcontroller to the AWS Cloud using MQTT over SSL/TLS.
+A concept of an end to end application that streams environmental telemetry (Temperature, Humidity, Pressure) from an ESP32 microcontroller to the AWS Cloud using MQTT over SSL/TLS.
 
-## 📖 Project Overview
+## Project Overview
 
-This project demonstrates a complete IoT pipeline, focusing on security and cloud integration. It reads real-time data from a **BME280** sensor and transmits it to **AWS IoT Core**.
+This project demonstrates a complete IoT pipeline, focusing on security and cloud integration. It reads real time data from a **BME280** sensor and transmits it to **AWS IoT Core**.
 
 The system is designed to be:
-* **Secure:** Uses X.509 Certificate-based mutual authentication.
+* **Secure:** Uses MQTT mutual authentication.
 * **Efficient:** Runs on MicroPython for rapid development and JSON data formatting.
 * **Scalable:** Leverages AWS serverless infrastructure.
 
-## 🏗️ Architecture
-
-[ ESP32 + BME280 ] --(I2C)--> [ MicroPython App ] --(MQTT/TLS)--> [ AWS IoT Core ]
-
-### Hardware Stack
+### Hardware
 * **Microcontroller:** ESP32 DevKit V1
 * **Sensor:** Bosch BME280 (Temperature, Humidity, Barometric Pressure)
 * **Protocol:** I2C
@@ -29,11 +24,17 @@ The system is designed to be:
 * **Firmware:** MicroPython (v1.20+)
 * **Cloud Service:** AWS IoT Core (MQTT Broker)
 * **Security:** AWS IAM Policies & X.509 Certificates
-* **Time Sync:** NTP (Network Time Protocol) for SSL validation
+
+## Key Features
+
+* **Smart Wi-Fi Provisioning (Captive Portal):** If the device cannot connect to Wi-Fi (or on first boot), it automatically launches an Access Point named **`ESP32-Config`**. Connect to it to configure your Wi-Fi credentials via a simple web interface.
+* **Deep Sleep Power Saving:** The device wakes up, reads sensors, transmits data, and immediately enters Deep Sleep for 1 hour to conserve energy.
+* **Edge Computing:** Calculates **Dew Point** and **Delta variations** (changes since the last hour) locally on the device before transmission.
+* **State Persistence:** Uses local flash memory to store the previous hour's readings, ensuring accurate delta calculations even after power cycles.
 
 ---
 
-## 🚀 Installation & Setup
+## Installation & Setup
 
 Follow these steps to replicate this project.
 
@@ -45,6 +46,14 @@ Connect the BME280 to the ESP32:
 * **SCL** -> GPIO 22
 
 ### 2. AWS Configuration
+The `aws/` folder in this repository contains the necessary code to process and store the telemetry data in the cloud.
+
+```text
+aws/
+├── lambda_function.py   # Python script to parse MQTT payloads and insert into DB
+└── model.json           # Data schema/definition for the DynamoDB table
+```
+
 1.  Log in to **AWS IoT Core Console**.
 2.  Create a new **Thing** (Device).
 3.  **Important:** Download the certificates immediately during creation:
@@ -52,42 +61,35 @@ Connect the BME280 to the ESP32:
     * Private Key (`.key`)
     * Amazon Root CA 1 (`.pem`)
 4.  Create and attach a Policy allowing `iot:Connect` and `iot:Publish`.
+5.  Put your certificates on the `esp32/certs` folder
+6. **DynamoDB**: Create a table (e.g., `WeatherStation`) (Partition key: `device_id`, Sort key: `timestamp`)
+7. **Lambda**: Create a python function using both aws folder files and grant it IAM permision to write to DynamoDB
+8. **IoT Rule**: Create a rule in the IoT Core to forward MQTT messages from the topic to the DynamoDB table
 
 ### 3. Firmware Setup
 1.  Flash the latest **MicroPython** firmware onto your ESP32.
 2.  Install the required libraries (via Thonny or pip):
     * `umqtt.simple`
     * `bme280` driver
+3. Upload all the files from the esp32 folder to the device (including `main.py`, `wifi_manager.py`, and the `certs` folder).
 
 ### 4. Project Configuration (Securing Credentials)
 This project uses a local `secrets.py` file to keep credentials safe. This file is ignored by Git.
 
-1.  Clone this repository.
-2.  Locate the file `secrets_template.py`.
-3.  Rename it to `secrets.py`.
-4.  Fill in your specific data:
-
-```python
-# secrets.py
-WIFI_SSID = "YOUR_WIFI_NAME"
-WIFI_PASS = "YOUR_WIFI_PASSWORD"
-
-AWS_ENDPOINT = "your-endpoint.iot.us-east-1.amazonaws.com"
-AWS_CLIENT_ID = "YOUR_THING_NAME"
-```
+1.  Locate the file `esp32/secrets.py`.
+2.  Update the `AWS_ENDPOINT` variable with your specific AWS IoT Core endpoint URL.
+3.  Update the `TOPIC` variable with your desired MQTT topic.
 
 ### 5. Run
-Reset the board. The ESP32 will connect to Wi-Fi, synchronize via NTP (crucial for SSL), and begin streaming JSON payloads to the MQTT topic weather-data.
-```json
-{
-    "temperature": "29.2C",
-    "pressure": "1026.63hPa",
-    "humidity": "45.2%"
-}
-```
+1.  Reset the board or plug it into a power source.
+2.  Since it is the first run, the ESP32 will not find a known network. It will create a WiFi Access Point named `ESP32-Config`.
+3.  Connect to this network using your phone or computer (Password: 12345678 or as defined in code).
+4.  A portal should open automatically (or go to 192.168.4.1).
+5.  Enter your home Wi-Fi SSID and Password.
+6.  The device will save the credentials, restart, and begin streaming data to AWS.
 
-## 🛡️ Security Note
+##  Security Note
 This repository does not contain actual private keys or Wi-Fi passwords. The secrets.py file is listed in .gitignore to prevent accidental exposure.
 
-## 📄 License
+## License
 This project is open-source and available under the MIT License.
